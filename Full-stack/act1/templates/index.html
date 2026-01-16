@@ -7,27 +7,52 @@
 
 <body>
 
-	<section class="encabezado">
-	<h1>Enzinah</h1>
-	<img src="enzinahlogo.png" alt="" width="200" height="200" margin="auto">
-	<h2>Nuestra mision es brindarte la mayor experiencia en calidad de sonido adaptado perfectamente a tus gustos</h2>
-	<h2>Fabricante de los mejores equipos de sonido</h2>
+	<section class="encabezado" id="encabezado">
+		<h1>Enzinah</h1>
+		<img src="enzinahlogo.png" alt="" width="200" height="200" margin="auto">
+		<h2>Nuestra mision es brindarte la mayor experiencia en calidad de sonido adaptado perfectamente a tus gustos</h2>
+		<h2>Fabricante de los mejores equipos de sonido</h2>
+		<button onclick="modoClaro()">Modo claro</button>
 	</section>
 	
-	<div class="">
-	<h3> Enzinah Soundwave v2</h3>
-	<img src="soundwave2.png" alt="soundwave v2" width="300" height="300" margin="auto">
-	<h4> Dile hola a la evolucion de nuestro reconocido modelo Soundwave, ahora con control de bajos, mayor bateria y el pinaculo de la tecnologia sonora con nuestro nuevo sistema hertzina.v1 </h4>
-	
-	<h3> Enzinah Boomer v1 </h3>
-	<img src="Boomer2.png" alt="soundwave v2" width="300" height="300" margin="auto">
-	<h4> Nos complacemos de anunciar nuestra nueva bocina Boomer diseñada para tener la mayor potencia de bajos frente a sus competidores </h4>
-	
-	<h3> Enzinah ReVamp  </h3>
-	<img src="revamp2.png" alt="soundwave v2" width="300" height="300" margin="auto">
-	<h4> Nuestra nueva linea de amplificadores electricos te dara todo el rango de sonido que un musico como tu necesita, disponible en diferentes modelos y potencia </h4>
-	</div>
-	
-	<div>
 
+	<section class="display" id="display">
+		<div>
+			<h3> Enzinah Soundwave v2</h3>
+			<img src="soundwave2.png" alt="soundwave v2" width="300" height="300" margin="auto">
+			<h4> Dile hola a la evolucion de nuestro reconocido modelo Soundwave, ahora con control de bajos, mayor bateria y el pinaculo de la tecnologia sonora con nuestro nuevo sistema hertzina.v1 </h4>
+		</div>
+
+		<div>
+			<h3> Enzinah Boomer v1 </h3>
+			<img src="Boomer2.png" alt="soundwave v2" width="300" height="300" margin="auto">
+			<h4> Nos complacemos de anunciar nuestra nueva bocina Boomer diseñada para tener la mayor potencia de bajos frente a sus competidores </h4>
+		</div>
+
+		<div>
+			<h3> Enzinah ReVamp  </h3>
+			<img src="revamp2.png" alt="soundwave v2" width="300" height="300" margin="auto">
+			<h4> Nuestra nueva linea de amplificadores electricos te dara todo el rango de sonido que un musico como tu necesita, disponible en diferentes modelos y potencia </h4>
+		</div>
+	
+	</section>
+
+	<form action="" class="formulario" id="formulario">
+		<h3>Tienes dudas o comentarios?</h3>
+		<div class:"form-innards">
+			<label for="name">Ingresa tu nombre:</label>
+			<input type="text" name="name" id="name" required>
+		</div>
+
+		<div class="form-innards">
+			<label for="email">Ingresa tu email</label>
+			<input type="email" name="email" id="email" required>
+		</div>
+
+		<div class="form-innards">
+			<input type="submit" value="Contactanos">
+		</div>
+	</form>
+<script src="script.js"></script>
+</body>
 
