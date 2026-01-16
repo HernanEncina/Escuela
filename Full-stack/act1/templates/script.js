@@ -1,7 +1,6 @@
 
 
 function modoClaro(){
-    alert("llamada a funcion js modoClaro")
     const x = document.getElementById("encabezado");
     const y = document.getElementById("formulario");
     const z = document.getElementById("display");
