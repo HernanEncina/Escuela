@@ -77,19 +77,5 @@ vercel --prod
 
 La API quedara disponible en https://act4-six.vercel.app
 
-## Estructura
-src/
-  ├── app.js
-  ├── server.js
-  ├── config/
-  ├── controllers/
-  ├── models/
-  ├── routes/
-  ├── middleware/
-  └── __tests__/
-public/
-  ├── login.html
-  ├── register.html
-  ├── dashboard.html
-  └── styles.css
+
 `
