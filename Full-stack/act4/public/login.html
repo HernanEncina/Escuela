@@ -4,70 +4,176 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .success {
+            color: #28a745;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #d4edda;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Iniciar Sesión</h1>
         
+        <div id="errorMessage" class="error"></div>
+        <div id="successMessage" class="success"></div>
+        
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Usuario:</label>
-                <input type="text" id="username" required>
+                <input type="text" id="username" name="username" required>
             </div>
             
             <div class="form-group">
                 <label for="password">Contraseña:</label>
-                <input type="password" id="password" required>
+                <input type="password" id="password" name="password" required>
             </div>
             
             <button type="submit">Ingresar</button>
         </form>
         
-        <p id="errorMessage" class="error" style="display: none;"></p>
-        
-        <p>¿No tienes cuenta? <a href="register.html">Regístrate aquí</a></p>
+        <div class="register-link">
+            ¿No tienes cuenta? <a href="register.html">Regístrate aquí</a>
+        </div>
     </div>
-     <script src="config.js"></script>
+
     <script>
-    fetch(`${CONFIG.API_URL}/api/auth/login`, {
-        // ...
-    })
-    <script>
+        // Determinar la URL base de la API
+        const API_BASE = window.location.origin; // https://act4-six.vercel.app
+        
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault()
+            e.preventDefault();
             
-            const username = document.getElementById('username').value
-            const password = document.getElementById('password').value
-            const errorEl = document.getElementById('errorMessage')
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('errorMessage');
+            const successEl = document.getElementById('successMessage');
+            
+            // Ocultar mensajes anteriores
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
             
             try {
-                const response = await fetch('window.location.origin/api/auth/login', {
+                console.log('Intentando login con:', { username, password });
+                console.log('URL:', `${API_BASE}/api/auth/login`);
+                
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ username, password })
-                })
+                });
                 
-                const data = await response.json()
+                const data = await response.json();
+                console.log('Respuesta:', response.status, data);
                 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Error al iniciar sesión')
+                    throw new Error(data.message || 'Error al iniciar sesión');
                 }
                 
                 // Guardar tokens
-                localStorage.setItem('accessToken', data.accessToken)
-                localStorage.setItem('refreshToken', data.refreshToken)
+                localStorage.setItem('accessToken', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken);
+                
+                // Mostrar éxito
+                successEl.textContent = '¡Login exitoso! Redirigiendo...';
+                successEl.style.display = 'block';
                 
                 // Redirigir al dashboard
-                window.location.href = 'dashboard.html'
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
                 
             } catch (error) {
-                errorEl.textContent = error.message
-                errorEl.style.display = 'block'
+                console.error('Error completo:', error);
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
             }
-        })
+        });
     </script>
 </body>
 </html>

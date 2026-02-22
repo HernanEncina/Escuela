@@ -65,149 +65,144 @@
             </div>
         </div>
     </div>
+
     <script src="config.js"></script>
     <script>
-    fetch(`${CONFIG.API_URL}/api/auth/login`, {
-        // ...
-    })
-</script>
-    <script>
         // ==================== CONFIGURACIÓN ====================
-        const API_BASE = 'window.location.origin/api'
-        let currentEditId = null // ID del producto que se está editando
-        let deleteId = null // ID del producto a eliminar
+        const API_BASE = CONFIG.API_URL;
+        let currentEditId = null;
+        let deleteId = null;
 
         // ==================== UTILIDADES ====================
         function getAccessToken() {
-            return localStorage.getItem('accessToken')
+            return localStorage.getItem('accessToken');
         }
 
         function getRefreshToken() {
-            return localStorage.getItem('refreshToken')
+            return localStorage.getItem('refreshToken');
         }
 
         function parseJwt(token) {
             try {
-                const base64Url = token.split('.')[1]
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-                return JSON.parse(atob(base64))
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                return JSON.parse(atob(base64));
             } catch (e) {
-                return null
+                return null;
             }
         }
 
         // Verificar autenticación
         function checkAuth() {
-            const token = getAccessToken()
+            const token = getAccessToken();
             if (!token) {
-                window.location.href = 'login.html'
-                return false
+                window.location.href = 'login.html';
+                return false;
             }
             
             // Mostrar username
-            const userData = parseJwt(token)
+            const userData = parseJwt(token);
             if (userData && userData.username) {
-                document.getElementById('username').textContent = userData.username
+                document.getElementById('username').textContent = userData.username;
             }
-            return true
+            return true;
         }
 
         // ==================== PETICIONES API ====================
-async function apiRequest(endpoint, options = {}) {
-    const token = getAccessToken()
-    
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        }
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-            ...defaultOptions,
-            ...options,
-            headers: {
-                ...defaultOptions.headers,
-                ...options.headers
-            }
-        })
-        
-        // Si el token expiró (401), intentar refrescar
-        if (response.status === 401) {
-            console.log('Token expirado, intentando refrescar...')
-            const refreshed = await refreshAccessToken()
-            if (refreshed) {
-                // Reintentar la petición original
-                return apiRequest(endpoint, options)
-            } else {
-                // No se pudo refrescar, redirigir a login
-                logout()
-                return null
-            }
-        }
-        
-        // Para 403, manejar sin intentar parsear JSON
-        if (response.status === 403) {
-            console.error('Acceso prohibido - token inválido')
-            // Podríamos intentar refrescar también
-            const refreshed = await refreshAccessToken()
-            if (refreshed) {
-                return apiRequest(endpoint, options)
-            } else {
-                logout()
-                return null
+        async function apiRequest(endpoint, options = {}) {
+            const token = getAccessToken();
+            
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    ...defaultOptions,
+                    ...options,
+                    headers: {
+                        ...defaultOptions.headers,
+                        ...options.headers
+                    }
+                });
+                
+                if (response.status === 401) {
+                    console.log('Token expirado, intentando refrescar...');
+                    const refreshed = await refreshAccessToken();
+                    if (refreshed) {
+                        return apiRequest(endpoint, options);
+                    } else {
+                        logout();
+                        return null;
+                    }
+                }
+                
+                return response;
+                
+            } catch (error) {
+                console.error('Error en apiRequest:', error);
+                throw error;
             }
         }
-        
-        return response
-        
-    } catch (error) {
-        console.error('Error en apiRequest:', error)
-        throw error
-    }
-}
+
+        async function refreshAccessToken() {
+            try {
+                const refreshToken = getRefreshToken();
+                if (!refreshToken) return false;
+                
+                const response = await fetch(`${API_BASE}/api/auth/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: refreshToken })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('accessToken', data.accessToken);
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('Error refreshing token:', error);
+                return false;
+            }
+        }
 
         // ==================== CRUD DE PRODUCTOS ====================
-        
-        // Cargar productos
-async function loadProducts() {
-    const productsContainer = document.getElementById('productsList')
-    const loadingEl = document.getElementById('loadingProducts')
-    const noProductsEl = document.getElementById('noProducts')
-    
-    try {
-        const response = await apiRequest('/products')
-        
-        if (!response) return // Ya se manejó el redirect
-        
-        if (response.ok) {
-            const products = await response.json()
+        async function loadProducts() {
+            const productsContainer = document.getElementById('productsList');
+            const loadingEl = document.getElementById('loadingProducts');
+            const noProductsEl = document.getElementById('noProducts');
             
-            loadingEl.style.display = 'none'
-            
-            if (products.length === 0) {
-                noProductsEl.style.display = 'block'
-                productsContainer.style.display = 'none'
-            } else {
-                noProductsEl.style.display = 'none'
-                productsContainer.style.display = 'block'
-                renderProducts(products)
+            try {
+                const response = await apiRequest('/api/products');
+                
+                if (!response) return;
+                
+                const products = await response.json();
+                
+                loadingEl.style.display = 'none';
+                
+                if (products.length === 0) {
+                    noProductsEl.style.display = 'block';
+                    productsContainer.style.display = 'none';
+                } else {
+                    noProductsEl.style.display = 'none';
+                    productsContainer.style.display = 'block';
+                    renderProducts(products);
+                }
+                
+            } catch (error) {
+                console.error('Error loading products:', error);
+                loadingEl.textContent = 'Error al cargar productos. Intenta de nuevo.';
             }
-        } else {
-            loadingEl.textContent = 'Error al cargar productos. Intenta de nuevo.'
-            console.error('Error response:', response.status)
         }
-        
-    } catch (error) {
-        console.error('Error loading products:', error)
-        loadingEl.textContent = 'Error al cargar productos. Intenta de nuevo.'
-    }
-}
 
-        // Renderizar productos en tabla
         function renderProducts(products) {
-            const productsContainer = document.getElementById('productsList')
+            const productsContainer = document.getElementById('productsList');
             
             let html = `
                 <table class="products-table">
@@ -220,7 +215,7 @@ async function loadProducts() {
                         </tr>
                     </thead>
                     <tbody>
-            `
+            `;
             
             products.forEach(product => {
                 html += `
@@ -233,224 +228,198 @@ async function loadProducts() {
                             <button onclick="confirmDelete('${product._id}', '${product.name}')" class="btn btn-sm btn-danger">🗑️ Eliminar</button>
                         </td>
                     </tr>
-                `
-            })
+                `;
+            });
             
             html += `
                     </tbody>
                 </table>
-            `
+            `;
             
-            productsContainer.innerHTML = html
+            productsContainer.innerHTML = html;
         }
-// Crear producto
-async function createProduct(productData) {
-    try {
-        const response = await apiRequest('/products', {
-            method: 'POST',
-            body: JSON.stringify(productData)
-        })
-        
-        if (!response) return // Ya se manejó el redirect en apiRequest
-        
-        if (response.ok) {
-            resetForm()
-            await loadProducts() // Asegurar que carga después de crear
-            showNotification('✅ Producto creado exitosamente', 'success')
-        } else {
-            // Intentar obtener el mensaje de error
-            let errorMessage = 'Error al crear producto'
+
+        async function createProduct(productData) {
             try {
-                const errorData = await response.json()
-                errorMessage = errorData.message || errorMessage
-            } catch {
-                // Si no es JSON, usar el texto de la respuesta
-                errorMessage = await response.text() || errorMessage
+                const response = await apiRequest('/api/products', {
+                    method: 'POST',
+                    body: JSON.stringify(productData)
+                });
+                
+                if (!response) return;
+                
+                if (response.ok) {
+                    resetForm();
+                    await loadProducts();
+                    showNotification('✅ Producto creado exitosamente', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification(`❌ Error: ${error.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error de conexión', 'error');
             }
-            showNotification(`❌ Error: ${errorMessage}`, 'error')
         }
-    } catch (error) {
-        console.error('Error en createProduct:', error)
-        showNotification('❌ Error de conexión', 'error')
-    }
-}
 
-        // Actualizar producto
         async function updateProduct(id, productData) {
-            const response = await apiRequest(`/products/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify(productData)
-            })
-            
-            if (response && response.ok) {
-                resetForm()
-                loadProducts()
-                showNotification('✅ Producto actualizado exitosamente', 'success')
-            } else if (response) {
-                const error = await response.json()
-                showNotification(`❌ Error: ${error.message}`, 'error')
+            try {
+                const response = await apiRequest(`/api/products/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(productData)
+                });
+                
+                if (!response) return;
+                
+                if (response.ok) {
+                    resetForm();
+                    await loadProducts();
+                    showNotification('✅ Producto actualizado exitosamente', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification(`❌ Error: ${error.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error de conexión', 'error');
             }
         }
 
-        // Eliminar producto
         async function deleteProduct(id) {
-            const response = await apiRequest(`/products/${id}`, {
-                method: 'DELETE'
-            })
-            
-            if (response && response.ok) {
-                loadProducts()
-                hideDeleteModal()
-                showNotification('✅ Producto eliminado exitosamente', 'success')
-            } else if (response) {
-                const error = await response.json()
-                showNotification(`❌ Error: ${error.message}`, 'error')
+            try {
+                const response = await apiRequest(`/api/products/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response && response.ok) {
+                    await loadProducts();
+                    hideDeleteModal();
+                    showNotification('✅ Producto eliminado exitosamente', 'success');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ Error al eliminar', 'error');
             }
         }
 
         // ==================== MANEJADORES DE UI ====================
-        
-        // Configurar formulario para crear/editar
-        function setupForm() {
-            const form = document.getElementById('productForm')
-            
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault()
-                
-                const productData = {
-                    name: document.getElementById('productName').value,
-                    price: parseFloat(document.getElementById('productPrice').value),
-                    description: document.getElementById('productDescription').value || undefined
-                }
-                
-                if (currentEditId) {
-                    await updateProduct(currentEditId, productData)
-                } else {
-                    await createProduct(productData)
-                }
-            })
-        }
-
-        // Editar producto (cargar datos en el formulario)
         window.editProduct = async (id) => {
             try {
-                const response = await apiRequest(`/products/${id}`)
-                if (!response) return
+                const response = await apiRequest('/api/products');
+                if (!response) return;
                 
-                const products = await response.json()
-                // Como getProducts devuelve array, filtramos el que necesitamos
-                const product = products.find(p => p._id === id)
+                const products = await response.json();
+                const product = products.find(p => p._id === id);
                 
                 if (product) {
-                    document.getElementById('productName').value = product.name
-                    document.getElementById('productPrice').value = product.price
-                    document.getElementById('productDescription').value = product.description || ''
+                    document.getElementById('productName').value = product.name;
+                    document.getElementById('productPrice').value = product.price;
+                    document.getElementById('productDescription').value = product.description || '';
                     
-                    document.getElementById('formTitle').textContent = '✏️ Editar Producto'
-                    document.getElementById('submitBtn').textContent = 'Actualizar Producto'
-                    document.getElementById('cancelEditBtn').style.display = 'inline-block'
+                    document.getElementById('formTitle').textContent = '✏️ Editar Producto';
+                    document.getElementById('submitBtn').textContent = 'Actualizar Producto';
+                    document.getElementById('cancelEditBtn').style.display = 'inline-block';
                     
-                    currentEditId = id
-                    
-                    // Scroll al formulario
-                    document.querySelector('.product-form-container').scrollIntoView({ behavior: 'smooth' })
+                    currentEditId = id;
                 }
             } catch (error) {
-                console.error('Error loading product for edit:', error)
-                showNotification('❌ Error al cargar el producto', 'error')
+                console.error('Error:', error);
+                showNotification('❌ Error al cargar el producto', 'error');
             }
-        }
+        };
 
-        // Confirmar eliminación
         window.confirmDelete = (id, name) => {
-            deleteId = id
-            document.getElementById('deleteProductName').textContent = name
-            document.getElementById('deleteModal').style.display = 'flex'
-        }
+            deleteId = id;
+            document.getElementById('deleteProductName').textContent = name;
+            document.getElementById('deleteModal').style.display = 'flex';
+        };
 
-        // Ocultar modal de eliminación
         function hideDeleteModal() {
-            deleteId = null
-            document.getElementById('deleteModal').style.display = 'none'
+            deleteId = null;
+            document.getElementById('deleteModal').style.display = 'none';
         }
 
-        // Resetear formulario
         function resetForm() {
-            document.getElementById('productForm').reset()
-            document.getElementById('formTitle').textContent = '➕ Crear Nuevo Producto'
-            document.getElementById('submitBtn').textContent = 'Guardar Producto'
-            document.getElementById('cancelEditBtn').style.display = 'none'
-            currentEditId = null
+            document.getElementById('productForm').reset();
+            document.getElementById('formTitle').textContent = '➕ Crear Nuevo Producto';
+            document.getElementById('submitBtn').textContent = 'Guardar Producto';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            currentEditId = null;
         }
 
-        // Mostrar notificación temporal
         function showNotification(message, type) {
-            // Crear elemento de notificación si no existe
-            let notification = document.querySelector('.notification')
+            let notification = document.querySelector('.notification');
             if (!notification) {
-                notification = document.createElement('div')
-                notification.className = 'notification'
-                document.body.appendChild(notification)
+                notification = document.createElement('div');
+                notification.className = 'notification';
+                document.body.appendChild(notification);
             }
             
-            notification.textContent = message
-            notification.className = `notification ${type}`
-            notification.style.display = 'block'
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
             
             setTimeout(() => {
-                notification.style.display = 'none'
-            }, 3000)
+                notification.style.display = 'none';
+            }, 3000);
         }
 
-        // Logout
         async function logout() {
-            const refreshToken = getRefreshToken()
+            const refreshToken = getRefreshToken();
             
             try {
-                await fetch(`${API_BASE}/auth/logout`, {
+                await fetch(`${API_BASE}/api/auth/logout`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token: refreshToken })
-                })
+                });
             } catch (error) {
-                console.error('Error en logout:', error)
+                console.error('Error en logout:', error);
             } finally {
-                localStorage.removeItem('accessToken')
-                localStorage.removeItem('refreshToken')
-                window.location.href = 'login.html'
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                window.location.href = 'login.html';
             }
         }
 
         // ==================== INICIALIZACIÓN ====================
         document.addEventListener('DOMContentLoaded', () => {
-            if (!checkAuth()) return
+            if (!checkAuth()) return;
             
-            setupForm()
-            loadProducts()
+            // Setup del formulario
+            document.getElementById('productForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const productData = {
+                    name: document.getElementById('productName').value,
+                    price: parseFloat(document.getElementById('productPrice').value),
+                    description: document.getElementById('productDescription').value || undefined
+                };
+                
+                if (currentEditId) {
+                    await updateProduct(currentEditId, productData);
+                } else {
+                    await createProduct(productData);
+                }
+            });
+            
+            loadProducts();
             
             // Botón de logout
-            document.getElementById('logoutBtn').addEventListener('click', logout)
+            document.getElementById('logoutBtn').addEventListener('click', logout);
             
             // Botón de cancelar edición
-            document.getElementById('cancelEditBtn').addEventListener('click', resetForm)
+            document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
             
             // Modal de eliminación
             document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
                 if (deleteId) {
-                    deleteProduct(deleteId)
+                    deleteProduct(deleteId);
                 }
-            })
+            });
             
-            document.getElementById('cancelDeleteBtn').addEventListener('click', hideDeleteModal)
-            
-            // Cerrar modal si se hace clic fuera
-            window.addEventListener('click', (e) => {
-                const modal = document.getElementById('deleteModal')
-                if (e.target === modal) {
-                    hideDeleteModal()
-                }
-            })
-        })
+            document.getElementById('cancelDeleteBtn').addEventListener('click', hideDeleteModal);
+        });
     </script>
 </body>
 </html>

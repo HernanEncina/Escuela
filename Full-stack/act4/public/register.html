@@ -29,51 +29,53 @@
         
         <p>¿Ya tienes cuenta? <a href="login.html">Inicia sesión aquí</a></p>
     </div>
- <script src="config.js"></script>
-    <script>
-    fetch(`${CONFIG.API_URL}/api/auth/login`, {
-        // ...
-    })
+
+    <script src="config.js"></script>
     <script>
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault()
+            e.preventDefault();
             
-            const username = document.getElementById('username').value
-            const password = document.getElementById('password').value
-            const errorEl = document.getElementById('errorMessage')
-            const messageEl = document.getElementById('message')
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('errorMessage');
+            const messageEl = document.getElementById('message');
             
-            errorEl.style.display = 'none'
-            messageEl.style.display = 'none'
+            errorEl.style.display = 'none';
+            messageEl.style.display = 'none';
             
             try {
-                const response = await fetch('window.location.origin/api/auth/register', {
+                console.log('Registrando usuario:', username);
+                console.log('URL:', `${CONFIG.API_URL}/api/auth/register`);
+                
+                const response = await fetch(`${CONFIG.API_URL}/api/auth/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ username, password })
-                })
+                });
                 
-                const data = await response.json()
+                const data = await response.json();
+                console.log('Respuesta:', response.status, data);
                 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Error al registrar')
+                    throw new Error(data.message || 'Error al registrar');
                 }
                 
-                messageEl.textContent = '¡Registro exitoso! Redirigiendo al login...'
-                messageEl.style.display = 'block'
+                messageEl.textContent = '¡Registro exitoso! Redirigiendo al login...';
+                messageEl.style.display = 'block';
                 
                 // Redirigir al login después de 2 segundos
                 setTimeout(() => {
-                    window.location.href = 'login.html'
-                }, 2000)
+                    window.location.href = 'login.html';
+                }, 2000);
                 
             } catch (error) {
-                errorEl.textContent = error.message
-                errorEl.style.display = 'block'
+                console.error('Error:', error);
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
             }
-        })
+        });
     </script>
 </body>
 </html>
