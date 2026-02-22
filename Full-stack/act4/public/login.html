@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Iniciar Sesión</h1>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" required>
+            </div>
+            
+            <button type="submit">Ingresar</button>
+        </form>
+        
+        <p id="errorMessage" class="error" style="display: none;"></p>
+        
+        <p>¿No tienes cuenta? <a href="register.html">Regístrate aquí</a></p>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            
+            const username = document.getElementById('username').value
+            const password = document.getElementById('password').value
+            const errorEl = document.getElementById('errorMessage')
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                
+                const data = await response.json()
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Error al iniciar sesión')
+                }
+                
+                // Guardar tokens
+                localStorage.setItem('accessToken', data.accessToken)
+                localStorage.setItem('refreshToken', data.refreshToken)
+                
+                // Redirigir al dashboard
+                window.location.href = 'dashboard.html'
+                
+            } catch (error) {
+                errorEl.textContent = error.message
+                errorEl.style.display = 'block'
+            }
+        })
+    </script>
+</body>
+</html>

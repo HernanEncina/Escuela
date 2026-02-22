@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redireccionando...</title>
+    <script>
+        // Si hay token, va al dashboard. Si no, al login
+        window.location.href = localStorage.getItem('accessToken') ? '/dashboard.html' : '/login.html'
+    </script>
+</head>
+<body>
+    <p>Redireccionando...</p>
+</body>
+</html>

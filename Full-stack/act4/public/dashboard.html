@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CRUD Productos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container dashboard-container">
+        <div class="header">
+            <div>
+                <h1>Bienvenido, <span id="username">Usuario</span>!</h1>
+                <p class="user-subtitle">Gestiona tus productos</p>
+            </div>
+            <button id="logoutBtn" class="btn btn-danger">Cerrar Sesión</button>
+        </div>
+
+        <!-- Formulario para crear/editar producto -->
+        <div class="product-form-container card">
+            <h2 id="formTitle">➕ Crear Nuevo Producto</h2>
+            <form id="productForm">
+                <div class="form-group">
+                    <label for="productName">Nombre del producto:</label>
+                    <input type="text" id="productName" required placeholder="Ej: Laptop Gamer">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productPrice">Precio:</label>
+                    <input type="number" id="productPrice" required placeholder="999.99" step="0.01" min="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productDescription">Descripción:</label>
+                    <textarea id="productDescription" rows="3" placeholder="Describe tu producto..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" id="submitBtn" class="btn btn-primary">Guardar Producto</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-secondary" style="display: none;">Cancelar Edición</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de productos -->
+        <div class="products-container card">
+            <h2>📦 Tus Productos</h2>
+            <div id="loadingProducts" class="loading">Cargando productos...</div>
+            <div id="productsList" style="display: none;"></div>
+            <div id="noProducts" class="empty-state" style="display: none;">
+                <p>No tienes productos aún. ¡Crea tu primer producto!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para confirmar eliminación -->
+    <div id="deleteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>🗑️ Confirmar Eliminación</h3>
+            <p>¿Estás seguro de que quieres eliminar <strong id="deleteProductName"></strong>?</p>
+            <p class="warning">Esta acción no se puede deshacer.</p>
+            <div class="modal-actions">
+                <button id="confirmDeleteBtn" class="btn btn-danger">Eliminar</button>
+                <button id="cancelDeleteBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURACIÓN ====================
+        const API_BASE = 'http://localhost:3000/api'
+        let currentEditId = null // ID del producto que se está editando
+        let deleteId = null // ID del producto a eliminar
+
+        // ==================== UTILIDADES ====================
+        function getAccessToken() {
+            return localStorage.getItem('accessToken')
+        }
+
+        function getRefreshToken() {
+            return localStorage.getItem('refreshToken')
+        }
+
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1]
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+                return JSON.parse(atob(base64))
+            } catch (e) {
+                return null
+            }
+        }
+
+        // Verificar autenticación
+        function checkAuth() {
+            const token = getAccessToken()
+            if (!token) {
+                window.location.href = 'login.html'
+                return false
+            }
+            
+            // Mostrar username
+            const userData = parseJwt(token)
+            if (userData && userData.username) {
+                document.getElementById('username').textContent = userData.username
+            }
+            return true
+        }
+
+        // ==================== PETICIONES API ====================
+async function apiRequest(endpoint, options = {}) {
+    const token = getAccessToken()
+    
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...options.headers
+            }
+        })
+        
+        // Si el token expiró (401), intentar refrescar
+        if (response.status === 401) {
+            console.log('Token expirado, intentando refrescar...')
+            const refreshed = await refreshAccessToken()
+            if (refreshed) {
+                // Reintentar la petición original
+                return apiRequest(endpoint, options)
+            } else {
+                // No se pudo refrescar, redirigir a login
+                logout()
+                return null
+            }
+        }
+        
+        // Para 403, manejar sin intentar parsear JSON
+        if (response.status === 403) {
+            console.error('Acceso prohibido - token inválido')
+            // Podríamos intentar refrescar también
+            const refreshed = await refreshAccessToken()
+            if (refreshed) {
+                return apiRequest(endpoint, options)
+            } else {
+                logout()
+                return null
+            }
+        }
+        
+        return response
+        
+    } catch (error) {
+        console.error('Error en apiRequest:', error)
+        throw error
+    }
+}
+
+        // ==================== CRUD DE PRODUCTOS ====================
+        
+        // Cargar productos
+async function loadProducts() {
+    const productsContainer = document.getElementById('productsList')
+    const loadingEl = document.getElementById('loadingProducts')
+    const noProductsEl = document.getElementById('noProducts')
+    
+    try {
+        const response = await apiRequest('/products')
+        
+        if (!response) return // Ya se manejó el redirect
+        
+        if (response.ok) {
+            const products = await response.json()
+            
+            loadingEl.style.display = 'none'
+            
+            if (products.length === 0) {
+                noProductsEl.style.display = 'block'
+                productsContainer.style.display = 'none'
+            } else {
+                noProductsEl.style.display = 'none'
+                productsContainer.style.display = 'block'
+                renderProducts(products)
+            }
+        } else {
+            loadingEl.textContent = 'Error al cargar productos. Intenta de nuevo.'
+            console.error('Error response:', response.status)
+        }
+        
+    } catch (error) {
+        console.error('Error loading products:', error)
+        loadingEl.textContent = 'Error al cargar productos. Intenta de nuevo.'
+    }
+}
+
+        // Renderizar productos en tabla
+        function renderProducts(products) {
+            const productsContainer = document.getElementById('productsList')
+            
+            let html = `
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Precio</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `
+            
+            products.forEach(product => {
+                html += `
+                    <tr>
+                        <td><strong>${product.name}</strong></td>
+                        <td>$${Number(product.price).toFixed(2)}</td>
+                        <td>${product.description || '-'}</td>
+                        <td class="actions">
+                            <button onclick="editProduct('${product._id}')" class="btn btn-sm btn-primary">✏️ Editar</button>
+                            <button onclick="confirmDelete('${product._id}', '${product.name}')" class="btn btn-sm btn-danger">🗑️ Eliminar</button>
+                        </td>
+                    </tr>
+                `
+            })
+            
+            html += `
+                    </tbody>
+                </table>
+            `
+            
+            productsContainer.innerHTML = html
+        }
+// Crear producto
+async function createProduct(productData) {
+    try {
+        const response = await apiRequest('/products', {
+            method: 'POST',
+            body: JSON.stringify(productData)
+        })
+        
+        if (!response) return // Ya se manejó el redirect en apiRequest
+        
+        if (response.ok) {
+            resetForm()
+            await loadProducts() // Asegurar que carga después de crear
+            showNotification('✅ Producto creado exitosamente', 'success')
+        } else {
+            // Intentar obtener el mensaje de error
+            let errorMessage = 'Error al crear producto'
+            try {
+                const errorData = await response.json()
+                errorMessage = errorData.message || errorMessage
+            } catch {
+                // Si no es JSON, usar el texto de la respuesta
+                errorMessage = await response.text() || errorMessage
+            }
+            showNotification(`❌ Error: ${errorMessage}`, 'error')
+        }
+    } catch (error) {
+        console.error('Error en createProduct:', error)
+        showNotification('❌ Error de conexión', 'error')
+    }
+}
+
+        // Actualizar producto
+        async function updateProduct(id, productData) {
+            const response = await apiRequest(`/products/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(productData)
+            })
+            
+            if (response && response.ok) {
+                resetForm()
+                loadProducts()
+                showNotification('✅ Producto actualizado exitosamente', 'success')
+            } else if (response) {
+                const error = await response.json()
+                showNotification(`❌ Error: ${error.message}`, 'error')
+            }
+        }
+
+        // Eliminar producto
+        async function deleteProduct(id) {
+            const response = await apiRequest(`/products/${id}`, {
+                method: 'DELETE'
+            })
+            
+            if (response && response.ok) {
+                loadProducts()
+                hideDeleteModal()
+                showNotification('✅ Producto eliminado exitosamente', 'success')
+            } else if (response) {
+                const error = await response.json()
+                showNotification(`❌ Error: ${error.message}`, 'error')
+            }
+        }
+
+        // ==================== MANEJADORES DE UI ====================
+        
+        // Configurar formulario para crear/editar
+        function setupForm() {
+            const form = document.getElementById('productForm')
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault()
+                
+                const productData = {
+                    name: document.getElementById('productName').value,
+                    price: parseFloat(document.getElementById('productPrice').value),
+                    description: document.getElementById('productDescription').value || undefined
+                }
+                
+                if (currentEditId) {
+                    await updateProduct(currentEditId, productData)
+                } else {
+                    await createProduct(productData)
+                }
+            })
+        }
+
+        // Editar producto (cargar datos en el formulario)
+        window.editProduct = async (id) => {
+            try {
+                const response = await apiRequest(`/products/${id}`)
+                if (!response) return
+                
+                const products = await response.json()
+                // Como getProducts devuelve array, filtramos el que necesitamos
+                const product = products.find(p => p._id === id)
+                
+                if (product) {
+                    document.getElementById('productName').value = product.name
+                    document.getElementById('productPrice').value = product.price
+                    document.getElementById('productDescription').value = product.description || ''
+                    
+                    document.getElementById('formTitle').textContent = '✏️ Editar Producto'
+                    document.getElementById('submitBtn').textContent = 'Actualizar Producto'
+                    document.getElementById('cancelEditBtn').style.display = 'inline-block'
+                    
+                    currentEditId = id
+                    
+                    // Scroll al formulario
+                    document.querySelector('.product-form-container').scrollIntoView({ behavior: 'smooth' })
+                }
+            } catch (error) {
+                console.error('Error loading product for edit:', error)
+                showNotification('❌ Error al cargar el producto', 'error')
+            }
+        }
+
+        // Confirmar eliminación
+        window.confirmDelete = (id, name) => {
+            deleteId = id
+            document.getElementById('deleteProductName').textContent = name
+            document.getElementById('deleteModal').style.display = 'flex'
+        }
+
+        // Ocultar modal de eliminación
+        function hideDeleteModal() {
+            deleteId = null
+            document.getElementById('deleteModal').style.display = 'none'
+        }
+
+        // Resetear formulario
+        function resetForm() {
+            document.getElementById('productForm').reset()
+            document.getElementById('formTitle').textContent = '➕ Crear Nuevo Producto'
+            document.getElementById('submitBtn').textContent = 'Guardar Producto'
+            document.getElementById('cancelEditBtn').style.display = 'none'
+            currentEditId = null
+        }
+
+        // Mostrar notificación temporal
+        function showNotification(message, type) {
+            // Crear elemento de notificación si no existe
+            let notification = document.querySelector('.notification')
+            if (!notification) {
+                notification = document.createElement('div')
+                notification.className = 'notification'
+                document.body.appendChild(notification)
+            }
+            
+            notification.textContent = message
+            notification.className = `notification ${type}`
+            notification.style.display = 'block'
+            
+            setTimeout(() => {
+                notification.style.display = 'none'
+            }, 3000)
+        }
+
+        // Logout
+        async function logout() {
+            const refreshToken = getRefreshToken()
+            
+            try {
+                await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: refreshToken })
+                })
+            } catch (error) {
+                console.error('Error en logout:', error)
+            } finally {
+                localStorage.removeItem('accessToken')
+                localStorage.removeItem('refreshToken')
+                window.location.href = 'login.html'
+            }
+        }
+
+        // ==================== INICIALIZACIÓN ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return
+            
+            setupForm()
+            loadProducts()
+            
+            // Botón de logout
+            document.getElementById('logoutBtn').addEventListener('click', logout)
+            
+            // Botón de cancelar edición
+            document.getElementById('cancelEditBtn').addEventListener('click', resetForm)
+            
+            // Modal de eliminación
+            document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+                if (deleteId) {
+                    deleteProduct(deleteId)
+                }
+            })
+            
+            document.getElementById('cancelDeleteBtn').addEventListener('click', hideDeleteModal)
+            
+            // Cerrar modal si se hace clic fuera
+            window.addEventListener('click', (e) => {
+                const modal = document.getElementById('deleteModal')
+                if (e.target === modal) {
+                    hideDeleteModal()
+                }
+            })
+        })
+    </script>
+</body>
+</html>
