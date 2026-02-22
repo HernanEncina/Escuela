@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "devStart": "nodemon server.js",
+    "devStartAuth": "nodemon authServer.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.13"
+  }
+}
