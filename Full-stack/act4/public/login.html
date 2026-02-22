@@ -28,7 +28,11 @@
         
         <p>¿No tienes cuenta? <a href="register.html">Regístrate aquí</a></p>
     </div>
-
+     <script src="config.js"></script>
+    <script>
+    fetch(`${CONFIG.API_URL}/api/auth/login`, {
+        // ...
+    })
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault()

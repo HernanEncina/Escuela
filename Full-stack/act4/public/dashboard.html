@@ -65,7 +65,12 @@
             </div>
         </div>
     </div>
-
+    <script src="config.js"></script>
+    <script>
+    fetch(`${CONFIG.API_URL}/api/auth/login`, {
+        // ...
+    })
+</script>
     <script>
         // ==================== CONFIGURACIÓN ====================
         const API_BASE = 'window.location.origin/api'
