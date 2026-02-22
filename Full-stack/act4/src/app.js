@@ -1,10 +1,25 @@
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
 const app = express()
 
+// Configuración CORS más permisiva para producción
+app.use(cors({
+    origin: '*', // Permite cualquier origen en producción
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
+app.use(express.json())
+app.use(express.static(path.join(process.cwd(), 'public')))
+// ... resto del código
 // Middlewares
 app.use(cors())
 app.use(express.json())
+
+// Servir archivos estáticos - CORREGIDO
+app.use(express.static(path.join(__dirname, '../public')))
+
 
 // Import routes
 const authRoutes = require('./routes/authRoutes')
