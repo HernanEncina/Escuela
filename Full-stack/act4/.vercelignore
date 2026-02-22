@@ -1,0 +1,7 @@
+cat > .vercelignore << 'EOF'
+node_modules
+.git
+README.md
+.gitignore
+coverage
+EOF
