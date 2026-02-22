@@ -1,16 +1,14 @@
-```markdown
-# Actividad 4 - Backend con JWT y MongoDB
 
-API REST con autenticacion JWT, refresh tokens y CRUD de productos.
+##API REST con autenticacion JWT, refresh tokens y CRUD de productos.
 
-## Tecnologias
+Tecnologias
 - Node.js
 - Express
 - MongoDB Atlas
 - JWT
 - Jest
 
-## Instalacion y ejecucion local
+Instalacion y ejecucion local
 
 1. Clonar el repositorio
 ```bash
